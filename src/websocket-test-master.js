@@ -1,7 +1,7 @@
 import { WebSocket } from 'ws';
 
 export default async function main(){
-    const ws = new WebSocket('ws://localhost:8080');
+    const ws = new WebSocket('ws://localhost:50000');
     ws.on('open', () => {
         ws.send(JSON.stringify({'insert': { _id: '1', content: 'content 1' }}))
 

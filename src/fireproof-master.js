@@ -3,6 +3,7 @@ import { WebSocketServer } from 'ws'
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 import fs from 'fs'
+import crypto from 'crypto'
 
 async function run(options = {}) {
 	const argv = require('minimist')(process.argv.slice(2))
@@ -112,7 +113,7 @@ async function run(options = {}) {
 					console.log('Inserting data: ', insertKey, insertValue);
 					validate(insertValue).then((result) => {
 						if (result) {
-							db.put(data).then(() => {
+							db.put({"_id": insertKey, "content": insertValue}).then(() => {
 								console.log('Data inserted:', data);
 								ws.send('Data inserted');
 							}).catch((error) => {
@@ -131,33 +132,36 @@ async function run(options = {}) {
 					let updateKey = data._id;
 					let updateValue = data.content;
 					let updatedDoc = {_id: updateKey, content: updateValue};
-					let docToUpdate2 = db.query("_id", selectID).then((doc) => {	
-					}).catch((error) => {
-						console.error('Error selecting document:', error);
-						ws.send('Error selecting document');
-					})
 					let docToUpdate = db.get(updateKey).then((doc) => {
-						validate(updatedDoc).then((result) => {
-							db.put(updatedDoc).then(() => {
-								console.log('Data updated:', data);
-								ws.send('Data updates');
+						if (!doc._id) {
+							console.error('Document not found:', updateKey);
+							console.log(doc)
+							ws.send('Document not found');
+						}
+						else{
+							updateKey = doc._id;
+							validate(updatedDoc).then((result) => {
+								db.put(updatedDoc).then(() => {
+									console.log('Data updated:', data);
+									ws.send('Data updates');
+								}).catch((error) => {
+									console.error('Error updating data:', error);
+									ws.send('Error updating data');
+								});
 							}).catch((error) => {
 								console.error('Error updating data:', error);
 								ws.send('Error updating data');
-							});
-						}).catch((error) => {
-							console.error('Error updating data:', error);
-							ws.send('Error updating data');
-						})
+							})
+						}
 					}).catch((error) => {
-							console.error('Error upfating document:', error);
+							console.error('Error updating document:', error);
 							ws.send('Error updating document');
 					});
 					break;
 				case 'select':
 					// Handle select logic
 					let selectID = data._id;
-					let docToSelect = db.query("_id", selectID).then((doc) => {
+					let docToSelect = db.get(selectID).then((doc) => {
 						console.log('Selected document:', doc);
 						ws.send(JSON.stringify(doc));
 					}).catch((error) => {
@@ -168,14 +172,20 @@ async function run(options = {}) {
 				case 'delete':
 					// Handle delete by ID logic
 					let deleteId = data._id;
-					let docToDelete = db.query("_id", selectID).then((doc) => {
+					let docToDelete = db.get(deleteId).then((doc) => {
+						if(!doc._id){
+							console.error('Document not found:', deleteId);
+							ws.send('Document not found');
+						}
+						else{
 							db.del(deleteId).then((deletedDoc) => {
-							console.log('Document deleted:', deletedDoc);
-							ws.send('Document deleted');
-						}).catch((error) => {
-							console.error('Error deleting document:', error);
-							ws.send('Error deleting document');
-						});
+								console.log('Document deleted:', deletedDoc);
+								ws.send('Document deleted');
+							}).catch((error) => {
+								console.error('Error deleting document:', error);
+								ws.send('Error deleting document');
+							});	
+						}
 					}).catch((error) => {
 						console.error('Error deleting document:', error);
 						ws.send('Error deleting document');
