@@ -1,4 +1,9 @@
 import { fireproof } from '@fireproof/core/node'
+import { connect } from '@fireproof/ipfs'
+
+
+
+
 import { WebSocketServer } from 'ws'
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
@@ -66,6 +71,16 @@ async function run(options = {}) {
 	process.on('SIGINT', handleTerminationSignal);
 	const id = index
 	const db = fireproof(swarmName+"-"+index+"-of-"+chunkSize)
+	const cx = connect.ipfs(db)
+	cx.ready.then(() => {
+		if (cx.authorized) {
+			// Hide the email input field
+		}
+		else {
+			cx.authorize(email)
+		}   
+	})
+
 
 	let config_json
 	if (fs.existsSync('config.json') === false) {
